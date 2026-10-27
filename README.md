@@ -1,18 +1,21 @@
 # PHP Extension Template
 
-A minimal, production-oriented starting point for building PHP extensions in C.
+A minimal starting point for building PHP extensions in C. The repository provides a small build system, PHPT tests, Unix and Windows build metadata, and GitHub Actions CI.
 
-The repository is intentionally small. It provides the build system, PHPT test infrastructure, cross-platform build metadata, and GitHub Actions CI that should be common to a PHP extension project.
+This is a template, not a complete application architecture. Rename the example extension (`numerus`) and adapt the configuration, source files, tests, and CI before using it for a real extension.
 
 ## Requirements
 
-- PHP 8.2 or later
-- Autoconf
+- PHP 8.2 or later, including the development tools for the PHP version you are building against
+- `phpize` and Autoconf
 - A C compiler and build toolchain
+- `make` on Unix-like systems
+
+The CI workflow currently builds against PHP 8.2, 8.3, 8.4, and 8.5 on Linux. This does not by itself guarantee compatibility with every operating system or PHP build configuration.
 
 ## Build
 
-On Unix-like systems:
+On Unix-like systems, from the repository root:
 
 ```sh
 phpize
@@ -20,47 +23,55 @@ phpize
 make
 ```
 
-Load the built extension:
+Check that the extension loads:
 
 ```sh
-php -d extension="$(pwd)/modules/numerus.so" -m
+php -d extension="$(pwd)/modules/numerus.so" -r 'var_dump(extension_loaded("numerus"));'
 ```
 
-On Windows, use the standard PHP build tools and `config.w32`.
+The expected output is `bool(true)`.
 
-## Test
+On Windows, use the standard PHP SDK/build tools and the repository's `config.w32` configuration. The Unix `phpize` / `configure` commands do not apply to the Windows build process.
 
-PHPT is the primary test mechanism:
+## Testing
+
+### Extension tests (PHPT)
+
+PHPT is the primary test mechanism in this repository. It exercises the extension through PHP and is appropriate for verifying extension loading, exposed functions, return values, warnings, and other PHP-visible behavior.
+
+After building:
 
 ```sh
 make test TESTS='tests/*.phpt'
 ```
 
-The test suite is deliberately independent of PHPUnit. PHP extensions should normally test their public PHP-visible behaviour through PHPT.
+See the [PHP documentation on testing PHP extensions](https://www.php.net/manual/en/install.pecl.php-test.php) for details about PHPT tests and their format.
+
+### Userland unit tests (PHPUnit)
+
+If you add unit tests for PHP userland code—for example, helper classes, wrappers, or application code—read the [PHPUnit 11 documentation](https://docs.phpunit.de/en/11.5/) before writing the test suite. PHPUnit 11 is the relevant documentation line for projects that still support PHP 8.2; check PHPUnit's requirements before selecting a different major version.
+
+PHPUnit does not replace PHPT for testing the extension's native build and PHP runtime integration. Use each test approach for the layer it is designed to cover.
 
 ## CI
 
-GitHub Actions currently verifies:
+The GitHub Actions workflow currently checks:
 
-- PHP 8.2
-- PHP 8.3
-- PHP 8.4
-- PHP 8.5
-- extension compilation
-- PHPT tests
-- extension loading
-- a separate debug-oriented build
+- Linux builds with PHP 8.2, 8.3, 8.4, and 8.5
+- Compilation and PHPT test execution for each matrix version
+- Whether the built extension loads in the matrix job
+- A separate debug-oriented build and PHPT test run on PHP 8.5
 
-The workflow is designed to be extended as an individual extension acquires additional platform or runtime requirements.
+The workflow is a starting point. Add operating systems, PHP configurations, or runtime checks when the extension's supported platform matrix requires them.
 
 ## Project structure
 
 - `config.m4` — Unix Autoconf configuration.
 - `config.w32` — Windows build configuration.
-- `php_numerus.h` — module declarations and version.
+- `php_numerus.h` — module declarations and example version.
 - `numerus.c` — minimal module implementation.
 - `tests/` — PHPT tests.
-- `.github/workflows/tests.yml` — build and test matrix.
+- `.github/workflows/tests.yml` — build and test workflow.
 - `.gitignore` — generated build artefacts.
 - `.editorconfig` — basic repository conventions.
 
@@ -68,14 +79,14 @@ The workflow is designed to be extended as an individual extension acquires addi
 
 When creating a new extension from this repository:
 
-1. Rename the repository.
-2. Rename the extension identifiers from `numerus` to the new extension name.
-3. Update `config.m4` and `config.w32`.
-4. Update the module declaration and version.
-5. Replace the example PHPT tests.
-6. Keep the CI structure unless the extension has additional requirements.
+1. Rename the repository and extension identifiers from `numerus` to the new extension name.
+2. Update `config.m4` and `config.w32`.
+3. Update the module declaration, version, and any matching source/header filenames.
+4. Replace or extend the example PHPT tests to cover the extension's public behavior.
+5. Add PHPUnit only if the project includes PHP userland code that benefits from unit tests; consult the PHPUnit documentation above.
+6. Update the CI workflow to reflect the PHP versions and platforms you actually support.
 
-The template deliberately does not prescribe an application architecture. The internal C structure should be chosen according to the extension's actual domain and performance requirements.
+Keep the initial structure small and introduce additional architecture only when the extension's requirements justify it.
 
 ## License
 
